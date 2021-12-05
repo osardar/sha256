@@ -1,8 +1,9 @@
 use std::error::Error;
 
-fn get_chunks_512(in_bytes: &mut Vec<u8>) -> Result<Vec<Vec<u8>>, Box<dyn Error>> {
-    in_bytes.chunks(512 / 8).map(|x| {
+fn get_chunks_512(in_bytes: &mut Vec<u8>) -> Result<Vec<Vec<u32>>, Box<dyn Error>> {
+    let extended_chunks: Vec<Vec<u32>> = in_bytes.chunks(512 / 8).map(|x| {
         let chunk_bytes = x.clone();
+
         //convert from Vec<u8> to Vec<u32>
         let mut chunk_words: Vec<u32> = chunk_bytes
             .chunks(4)
@@ -19,6 +20,8 @@ fn get_chunks_512(in_bytes: &mut Vec<u8>) -> Result<Vec<Vec<u8>>, Box<dyn Error>
             .collect::<Vec<u32>>();
 
         for i in 16..63 {
+            chunk_words.push(0);
+
             let s0: u32 = (chunk_words[i - 15].rotate_right(7))
                 ^ (chunk_words[i - 15].rotate_right(18))
                 ^ (chunk_words[i - 15] >> 3);
@@ -28,9 +31,12 @@ fn get_chunks_512(in_bytes: &mut Vec<u8>) -> Result<Vec<Vec<u8>>, Box<dyn Error>
             
             chunk_words[i] = chunk_words[i - 16] + s0 + chunk_words[i-7] + s1; 
         }
-    });
-    //.collect();
-    Ok(Vec::<Vec<u8>>::new())
+
+        chunk_words
+    })
+    .collect::<Vec<Vec<u32>>>();
+
+    Ok(extended_chunks)
 }
 
 fn pre_processing(in_bytes: &mut Vec<u8>) -> Result<&Vec<u8>, Box<dyn Error>> {
@@ -94,7 +100,7 @@ mod tests {
     #[test]
     fn test_get_chunks() {
         let mut in_bytes = Vec::<u8>::new();
-        for i in (0..512) {
+        for i in 0..512 {
             in_bytes.push(0);
         }
         get_chunks_512(&mut in_bytes);
