@@ -55,23 +55,21 @@ fn compression(chunks: &mut Vec<Vec<u32>>) {
 
     let mut i = 0; // trait issue when attempting to use enumerate
     for chunk in chunks {   
-        println!("iter: {}", i);
         s1 = (e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25));
         ch = ((e & f) ^ ((!e) & g));
-        temp1 = (h + s1 + ch + arr_k[i] + chunk[i]);     
+        temp1 = (h.overflowing_add(s1).0.overflowing_add(ch.overflowing_add(arr_k[i]).0).0 + chunk[i]);     
         s0 = (a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22)) ;
         maj = ((a & b) ^ (a & c) ^ (b & c));
-        println!("s0: {:#x} maj: {:#x}", s0, maj);
-        temp2 = (s0 + maj) % u32::pow(2,32);
+        temp2 = s0.overflowing_add(maj).0;
 
         h = g;
         g = f;
         f = e;
-        e = d + temp1;
+        e = d.overflowing_add(temp1).0;
         d = c;
         c = b;
         b = a;
-        a = temp1 + temp2;
+        a = temp1.overflowing_add(temp2).0;
 
         i += 1;
     }
@@ -169,7 +167,7 @@ mod tests {
     #[test]
     fn test_compression() {
         let mut chunks: Vec<Vec<u32>> = Vec::<Vec::<u32>>::new();
-        for i in 0..16 {
+        for i in 0..64 {
             let mut chunk = Vec::<u32>::new();
             for i in 0..64 {
                 chunk.push(0);
