@@ -1,7 +1,7 @@
 use std::error::Error;
 
-fn compression(chunks: &mut Vec<Vec<u32>>) {
-    let arr_h: [u32; 8] = [
+fn compression(chunks: &mut Vec<Vec<u32>>) -> Result<[u32; 8], Box <dyn Error>> {
+    let mut arr_h: [u32; 8] = [
         0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab,
         0x5be0cd19,
     ];
@@ -35,29 +35,11 @@ fn compression(chunks: &mut Vec<Vec<u32>>) {
     let mut temp2: u32 = 0;
     let mut maj: u32 = 0;
 
-    /*
-        S1 := (e rightrotate 6) xor (e rightrotate 11) xor (e rightrotate 25)
-        ch := (e and f) xor ((not e) and g)
-        temp1 := h + S1 + ch + k[i] + w[i]
-        S0 := (a rightrotate 2) xor (a rightrotate 13) xor (a rightrotate 22)
-        maj := (a and b) xor (a and c) xor (b and c)
-        temp2 := S0 + maj
- 
-        h := g
-        g := f
-        f := e
-        e := d + temp1
-        d := c
-        c := b
-        b := a
-        a := temp1 + temp2
-    */
-
     let mut i = 0; // trait issue when attempting to use enumerate
     for chunk in chunks {   
         s1 = (e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25));
         ch = ((e & f) ^ ((!e) & g));
-        temp1 = (h.overflowing_add(s1).0.overflowing_add(ch.overflowing_add(arr_k[i]).0).0 + chunk[i]);     
+        temp1 = (h.overflowing_add(s1).0.overflowing_add(ch.overflowing_add(arr_k[i]).0).0.overflowing_add(chunk[i]).0);     
         s0 = (a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22)) ;
         maj = ((a & b) ^ (a & c) ^ (b & c));
         temp2 = s0.overflowing_add(maj).0;
@@ -73,6 +55,17 @@ fn compression(chunks: &mut Vec<Vec<u32>>) {
 
         i += 1;
     }
+
+    arr_h[0] = arr_h[0].overflowing_add(a).0;
+    arr_h[1] = arr_h[1].overflowing_add(b).0;
+    arr_h[2] = arr_h[2].overflowing_add(c).0;
+    arr_h[3] = arr_h[3].overflowing_add(d).0;
+    arr_h[4] = arr_h[4].overflowing_add(e).0;
+    arr_h[5] = arr_h[5].overflowing_add(f).0;
+    arr_h[6] = arr_h[6].overflowing_add(g).0;
+    arr_h[7] = arr_h[7].overflowing_add(h).0;
+
+    Ok(arr_h.clone())
 }
 
 fn get_chunks_512(in_bytes: &mut Vec<u8>) -> Result<Vec<Vec<u32>>, Box<dyn Error>> {
@@ -104,7 +97,7 @@ fn get_chunks_512(in_bytes: &mut Vec<u8>) -> Result<Vec<Vec<u32>>, Box<dyn Error
                 ^ (chunk_words[i - 2].rotate_right(19))
                 ^ (chunk_words[i - 2] >> 10);
             
-            chunk_words[i] = chunk_words[i - 16] + s0 + chunk_words[i-7] + s1; 
+            chunk_words[i] = chunk_words[i - 16].overflowing_add(s0).0.overflowing_add(chunk_words[i-7].overflowing_add(s1).0).0; 
         }
 
         chunk_words
@@ -140,7 +133,9 @@ fn pre_processing(in_bytes: &mut Vec<u8>) -> Result<&Vec<u8>, Box<dyn Error>> {
 fn gen_sha256(str_in: String) -> Result<String, Box<dyn Error>> {
     let mut in_vec: Vec<u8> = str_in.into_bytes();
     pre_processing(&mut in_vec);
-    let ext_chunks: Vec<Vec<u32>> = get_chunks_512(&mut in_vec).unwrap();
+    let mut ext_chunks: Vec<Vec<u32>> = get_chunks_512(&mut in_vec).unwrap();
+    let h: [u32; 8] = compression(&mut ext_chunks).unwrap();
+    println!("{:?}", h);
 
     return Ok(String::from("OK"));
 }
@@ -177,5 +172,10 @@ mod tests {
         }
         
         compression(&mut chunks);
+    }
+
+    #[test]
+    fn test_gen_sha256() {
+        gen_sha256(String::from(""));
     }
 }
