@@ -4,6 +4,7 @@ use std::error::Error;
 pub struct Sha256 {
     arr_h: [u32; 8],
     arr_k: [u32; 64],
+    cache: Vec<u8>,
     counter: usize,
     output_size: usize,
     blocksize: usize,
@@ -34,6 +35,7 @@ impl Sha256 {
         Sha256 {
             arr_h: arr_h.clone(),
             arr_k: arr_k.clone(),
+            cache: Vec::<u8>::new(),
             counter: 0,
             output_size: 8,
             blocksize: 1,
@@ -43,19 +45,30 @@ impl Sha256 {
     }
 
     pub fn update(self: &mut Sha256, m: &mut Vec<u8>) -> Result<&[u32; 8], Box<dyn Error>> {
-        for chunk in m.chunks(64) {
-            self.compress(&chunk.to_vec());
-        }
-        
         self.counter += m.len();
+        self.cache.append(m);
+        println!("update: len: {}", self.counter);
 
+        println!("ctx.h {:x?}", self.arr_h);
+        let cache = self.cache.clone();
+        for chunk in cache.chunks_exact(64) {   // .remainder() for leftover
+            println!("chunk loop: len: {}", chunk.len());
+            self.compress(&chunk.to_vec());
+            self.cache = self.cache[64..].to_vec();
+           println!("ctx.h {:x?}", self.arr_h);
+        }
+
+        println!("self.cache: {:x?}", self.cache);
+        
         Ok(&[0;8])
     }
 
     fn compress(self: &mut Sha256, c: &Vec<u8>) {
         let mut w: [u32; 64] = [0; 64];
         let mut c = c.clone();
-        c.resize(64, 0);
+        //c.resize(64, 0); TODO should be an error if the vec is not len 64
+
+        println!("compress: c: {:x?}", c);
 
         for i in 0..15 {
             w[i] = (c[4*i] as u32) << 24
@@ -79,7 +92,10 @@ impl Sha256 {
             w[i] = w[i - 16].overflowing_add(s0).0.overflowing_add(w[i-7].overflowing_add(s1).0).0; 
         }
 
-        let [mut a, mut b, mut c, mut d, mut e, mut f,mut g,mut h]: [u32; 8] = self.arr_h;
+        let [mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut h]: [u32; 8] = self.arr_h;
+
+        println!("compress: w: {:x?}", w);
+        println!("compress: pre h: {:x?}", self.arr_h);
 
         let mut s0: u32 = 0;
         let mut s1: u32 = 0;
@@ -104,6 +120,8 @@ impl Sha256 {
             c = b;
             b = a;
             a = temp1.overflowing_add(temp2).0;
+
+            println!("{:x} {:x} {:x} {:x} {:x} {:x} {:x} {:x}", a,b,c,d,e,f,g,h);
         }
     
         self.arr_h[0] = self.arr_h[0].overflowing_add(a).0;
@@ -114,6 +132,8 @@ impl Sha256 {
         self.arr_h[5] = self.arr_h[5].overflowing_add(f).0;
         self.arr_h[6] = self.arr_h[6].overflowing_add(g).0;
         self.arr_h[7] = self.arr_h[7].overflowing_add(h).0;
+
+        println!("compress: post h: {:x?}", self.arr_h);
     }
 
     fn pad(self: &Sha256, msglen: usize) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -133,6 +153,7 @@ impl Sha256 {
             pad.push(0);
         }
         pad.append(&mut length);
+
         Ok(pad)
     }
 
