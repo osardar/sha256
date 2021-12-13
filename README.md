@@ -1,6 +1,16 @@
 # sha256
 This project is a basic Rust implementation of SHA-256 and is being used as an opportunity to explore threading in Rust. I'm merely porting some code from the [SHA-2](https://en.wikipedia.org/wiki/SHA-2) wiki as well as @thomdixon's [pysha2](https://github.com/thomdixon/pysha2/blob/master/sha2/sha256.py) project.
 
+## Cmdline Usage
+`./sha256 <data>`
+
+```
+$ cargo build --release
+$ ./target/release/sha256 wow
+b6dc933311bc2357cc5fc636a4dbe41a01b7a33b583d043a7f870f3440697e27
+```
+
+## SHA-2 Wiki Algo
 ```
 Note 1: All variables are 32 bit unsigned integers and addition is calculated modulo 232
 Note 2: For each round, there is one round constant k[i] and one entry in the message schedule array w[i], 0 ≤ i ≤ 63
