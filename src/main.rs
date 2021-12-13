@@ -1,11 +1,15 @@
+use std::env;
 use sha256::Sha256;
 
 fn main() {
-    let mut ctx: Sha256 = Sha256::init();
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        println!("sha256 <input_str>");
+        return;
+    }
 
-    let m: &mut Vec<u8> = &mut String::from("A").into_bytes();
-    println!("Update");
+    let mut ctx: Sha256 = Sha256::init();
+    let m: &mut Vec<u8> = &mut args[1].clone().into_bytes();
     ctx.update(m);
-    println!("Digest");
-    ctx.digest();
+    println!("{}", ctx.hexdigest().unwrap());
 }
