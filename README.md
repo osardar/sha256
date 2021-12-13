@@ -1,5 +1,5 @@
 # sha256
-This project is a basic Rust implementation of SHA-256 and is being used as an opportunity to explore threading in Rust. I'm merely porting some code from the [SHA-2](https://en.wikipedia.org/wiki/SHA-2) wiki.
+This project is a basic Rust implementation of SHA-256 and is being used as an opportunity to explore threading in Rust. I'm merely porting some code from the [SHA-2](https://en.wikipedia.org/wiki/SHA-2) wiki as well as @thomdixon's [pysha2](https://github.com/thomdixon/pysha2/blob/master/sha2/sha256.py) project.
 
 ```
 Note 1: All variables are 32 bit unsigned integers and addition is calculated modulo 232
