@@ -1,5 +1,5 @@
-use std::env;
 use sha256::Sha256;
+use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
