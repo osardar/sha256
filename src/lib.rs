@@ -1,5 +1,18 @@
 use std::error::Error;
 
+#[macro_export]
+macro_rules! overflowing_add {
+    ( $( $x:expr ),* ) => {
+        {
+            let mut tmp: u32 = 0;
+            $(
+                tmp = tmp.overflowing_add($x).0;
+            )*
+            tmp
+        }
+    };
+}
+
 #[derive(Debug)]
 pub struct Sha256 {
     arr_h: [u32; 8],
@@ -49,7 +62,7 @@ impl Sha256 {
         self.cache.append(m);
 
         let cache = self.cache.clone();
-        for chunk in cache.chunks_exact(64) {   // .remainder() for leftover
+        for chunk in cache.chunks_exact(64) {
             self.compress(&chunk.to_vec());
             self.cache = self.cache[64..].to_vec();
         }
@@ -60,7 +73,6 @@ impl Sha256 {
     fn compress(self: &mut Sha256, c: &Vec<u8>) {
         let mut w: [u32; 64] = [0; 64];
         let mut c = c.clone();
-        //c.resize(64, 0); TODO should be an error if the vec is not len 64
 
         for i in 0..16 {
             w[i] = (c[4*i] as u32) << 24
@@ -81,7 +93,7 @@ impl Sha256 {
                 ^ (w[i - 2].rotate_right(19))
                 ^ (w[i - 2] >> 10);
             
-            w[i] = w[i - 16].overflowing_add(s0).0.overflowing_add(w[i-7].overflowing_add(s1).0).0; 
+            w[i] = overflowing_add!(w[i-16], s0, w[i-7], s1);
         }
 
         let [mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut h]: [u32; 8] = self.arr_h;
@@ -96,29 +108,29 @@ impl Sha256 {
         for i in 0..64 {   
             s0 = a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22);
             maj = (a & b) ^ (a & c) ^ (b & c);
-            temp2 = s0.overflowing_add(maj).0;
+            temp2 = overflowing_add!(s0, maj);
             s1 = e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25);
             ch = (e & f) ^ ((!e) & g);
-            temp1 = h.overflowing_add(s1).0.overflowing_add(ch.overflowing_add(self.arr_k[i]).0).0.overflowing_add(w[i]).0;     
+            temp1 = overflowing_add!(h, s1, ch, self.arr_k[i], w[i]);
     
             h = g;
             g = f;
             f = e;
-            e = d.overflowing_add(temp1).0;
+            e = overflowing_add!(d, temp1);
             d = c;
             c = b;
             b = a;
-            a = temp1.overflowing_add(temp2).0;
+            a = overflowing_add!(temp1, temp2);
         }
     
-        self.arr_h[0] = self.arr_h[0].overflowing_add(a).0;
-        self.arr_h[1] = self.arr_h[1].overflowing_add(b).0;
-        self.arr_h[2] = self.arr_h[2].overflowing_add(c).0;
-        self.arr_h[3] = self.arr_h[3].overflowing_add(d).0;
-        self.arr_h[4] = self.arr_h[4].overflowing_add(e).0;
-        self.arr_h[5] = self.arr_h[5].overflowing_add(f).0;
-        self.arr_h[6] = self.arr_h[6].overflowing_add(g).0;
-        self.arr_h[7] = self.arr_h[7].overflowing_add(h).0;
+        self.arr_h[0] = overflowing_add!(self.arr_h[0], a);
+        self.arr_h[1] = overflowing_add!(self.arr_h[1], b);
+        self.arr_h[2] = overflowing_add!(self.arr_h[2], c);
+        self.arr_h[3] = overflowing_add!(self.arr_h[3], d);
+        self.arr_h[4] = overflowing_add!(self.arr_h[4], e);
+        self.arr_h[5] = overflowing_add!(self.arr_h[5], f);
+        self.arr_h[6] = overflowing_add!(self.arr_h[6], g);
+        self.arr_h[7] = overflowing_add!(self.arr_h[7], h);
     }
 
     fn pad(self: &Sha256, msglen: usize) -> Result<Vec<u8>, Box<dyn Error>> {
