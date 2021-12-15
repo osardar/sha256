@@ -19,10 +19,6 @@ pub struct Sha256 {
     arr_k: [u32; 64],
     cache: Vec<u8>,
     counter: usize,
-    output_size: usize,
-    blocksize: usize,
-    block_size: usize,
-    digest_size: usize,
 }
 
 impl Sha256 {
@@ -44,16 +40,12 @@ impl Sha256 {
             0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7,
             0xc67178f2,
         ];
-        
+
         Sha256 {
-            arr_h: arr_h.clone(),
-            arr_k: arr_k.clone(),
+            arr_h,
+            arr_k,
             cache: Vec::<u8>::new(),
             counter: 0,
-            output_size: 8,
-            blocksize: 1,
-            block_size: 64,
-            digest_size: 32,
         }
     }
 
@@ -67,18 +59,18 @@ impl Sha256 {
             self.cache = self.cache[64..].to_vec();
         }
 
-        Ok(&[0;8])
+        Ok(&[0; 8])
     }
 
     fn compress(self: &mut Sha256, c: &Vec<u8>) {
         let mut w: [u32; 64] = [0; 64];
-        let mut c = c.clone();
+        let c = c.clone();
 
         for i in 0..16 {
-            w[i] = (c[4*i] as u32) << 24
-                | (c[4*i + 1] as u32) << 16
-                | (c[4*i + 2] as u32) << 8
-                | (c[4*i + 3] as u32);
+            w[i] = (c[4 * i] as u32) << 24
+                | (c[4 * i + 1] as u32) << 16
+                | (c[4 * i + 2] as u32) << 8
+                | (c[4 * i + 3] as u32);
         }
 
         let mut w: Vec<u32> = w.to_vec();
@@ -86,33 +78,32 @@ impl Sha256 {
         for i in 16..64 {
             w.push(0);
 
-            let s0: u32 = (w[i - 15].rotate_right(7))
-                ^ (w[i - 15].rotate_right(18))
-                ^ (w[i - 15] >> 3);
-            let s1: u32 = (w[i - 2].rotate_right(17))
-                ^ (w[i - 2].rotate_right(19))
-                ^ (w[i - 2] >> 10);
-            
-            w[i] = overflowing_add!(w[i-16], s0, w[i-7], s1);
+            let s0: u32 =
+                (w[i - 15].rotate_right(7)) ^ (w[i - 15].rotate_right(18)) ^ (w[i - 15] >> 3);
+            let s1: u32 =
+                (w[i - 2].rotate_right(17)) ^ (w[i - 2].rotate_right(19)) ^ (w[i - 2] >> 10);
+
+            w[i] = overflowing_add!(w[i - 16], s0, w[i - 7], s1);
         }
 
         let [mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut h]: [u32; 8] = self.arr_h;
 
-        let mut s0: u32 = 0;
-        let mut s1: u32 = 0;
-        let mut ch: u32 = 0;
-        let mut temp1: u32 = 0;
-        let mut temp2: u32 = 0;
-        let mut maj: u32 = 0;
-    
-        for i in 0..64 {   
+        //let mut s0: u32 = 0;
+        let mut s0: u32;
+        let mut s1: u32;
+        let mut ch: u32;
+        let mut temp1: u32;
+        let mut temp2: u32;
+        let mut maj: u32;
+
+        for i in 0..64 {
             s0 = a.rotate_right(2) ^ a.rotate_right(13) ^ a.rotate_right(22);
             maj = (a & b) ^ (a & c) ^ (b & c);
             temp2 = overflowing_add!(s0, maj);
             s1 = e.rotate_right(6) ^ e.rotate_right(11) ^ e.rotate_right(25);
             ch = (e & f) ^ ((!e) & g);
             temp1 = overflowing_add!(h, s1, ch, self.arr_k[i], w[i]);
-    
+
             h = g;
             g = f;
             f = e;
@@ -122,7 +113,7 @@ impl Sha256 {
             b = a;
             a = overflowing_add!(temp1, temp2);
         }
-    
+
         self.arr_h[0] = overflowing_add!(self.arr_h[0], a);
         self.arr_h[1] = overflowing_add!(self.arr_h[1], b);
         self.arr_h[2] = overflowing_add!(self.arr_h[2], c);
@@ -136,17 +127,17 @@ impl Sha256 {
     fn pad(self: &Sha256, msglen: usize) -> Result<Vec<u8>, Box<dyn Error>> {
         let mdi = msglen & 0x3F;
         let mut length: Vec<u8> = ((msglen as u64) << 3).to_be_bytes().to_vec();
-        let mut padlen = 0;
-    
+        let padlen;
+
         if mdi < 56 {
             padlen = 55 - mdi
         } else {
             padlen = 119 - mdi
         }
-    
+
         let mut pad: Vec<u8> = Vec::<u8>::new();
         pad.push(0x80);
-        for i in 0..padlen {
+        for _i in 0..padlen {
             pad.push(0);
         }
         pad.append(&mut length);
@@ -157,7 +148,7 @@ impl Sha256 {
     pub fn digest(self: &mut Sha256) -> Result<Vec<u8>, Box<dyn Error>> {
         let mut pad = self.pad(self.counter).unwrap();
         self.update(&mut pad);
-        
+
         let mut tmp: Vec<u8> = Vec::<u8>::new();
         for h in self.arr_h.clone() {
             for h_byte in h.to_be_bytes() {
@@ -178,7 +169,6 @@ impl Sha256 {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,7 +178,10 @@ mod tests {
         let mut ctx: Sha256 = Sha256::init();
         let mut m: Vec<u8> = Vec::<u8>::new();
         ctx.update(&mut m);
-        assert_eq!("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", ctx.hexdigest().unwrap());
+        assert_eq!(
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            ctx.hexdigest().unwrap()
+        );
     }
 
     #[test]
@@ -196,7 +189,10 @@ mod tests {
         let mut ctx: Sha256 = Sha256::init();
         let mut m: Vec<u8> = "A".as_bytes().to_vec();
         ctx.update(&mut m);
-        assert_eq!("559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd", ctx.hexdigest().unwrap());
+        assert_eq!(
+            "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
+            ctx.hexdigest().unwrap()
+        );
     }
 
     #[test]
@@ -204,7 +200,10 @@ mod tests {
         let mut ctx: Sha256 = Sha256::init();
         let mut m: Vec<u8> = "A".repeat(4).as_bytes().to_vec();
         ctx.update(&mut m);
-        assert_eq!("63c1dd951ffedf6f7fd968ad4efa39b8ed584f162f46e715114ee184f8de9201", ctx.hexdigest().unwrap());
+        assert_eq!(
+            "63c1dd951ffedf6f7fd968ad4efa39b8ed584f162f46e715114ee184f8de9201",
+            ctx.hexdigest().unwrap()
+        );
     }
 
     #[test]
@@ -212,7 +211,10 @@ mod tests {
         let mut ctx: Sha256 = Sha256::init();
         let mut m: Vec<u8> = "A".repeat(64).as_bytes().to_vec();
         ctx.update(&mut m);
-        assert_eq!("d53eda7a637c99cc7fb566d96e9fa109bf15c478410a3f5eb4d4c4e26cd081f6", ctx.hexdigest().unwrap());
+        assert_eq!(
+            "d53eda7a637c99cc7fb566d96e9fa109bf15c478410a3f5eb4d4c4e26cd081f6",
+            ctx.hexdigest().unwrap()
+        );
     }
 
     #[test]
@@ -220,6 +222,9 @@ mod tests {
         let mut ctx: Sha256 = Sha256::init();
         let mut m: Vec<u8> = "A".repeat(128).as_bytes().to_vec();
         ctx.update(&mut m);
-        assert_eq!("b6ac3cc10386331c765f04f041c147d0f278f2aed8eaa021e2d0057fc6f6ff9e", ctx.hexdigest().unwrap());
+        assert_eq!(
+            "b6ac3cc10386331c765f04f041c147d0f278f2aed8eaa021e2d0057fc6f6ff9e",
+            ctx.hexdigest().unwrap()
+        );
     }
 }
