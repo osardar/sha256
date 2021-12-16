@@ -135,8 +135,7 @@ impl Sha256 {
             padlen = 119 - mdi
         }
 
-        let mut pad: Vec<u8> = Vec::<u8>::new();
-        pad.push(0x80);
+        let mut pad: Vec<u8> = vec![0x80];
         for _i in 0..padlen {
             pad.push(0);
         }
@@ -150,7 +149,7 @@ impl Sha256 {
         self.update(&mut pad);
 
         let mut tmp: Vec<u8> = Vec::<u8>::new();
-        for h in self.arr_h.clone() {
+        for h in self.arr_h {
             for h_byte in h.to_be_bytes() {
                 tmp.push(h_byte);
             }
