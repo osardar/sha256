@@ -161,9 +161,10 @@ impl Sha256 {
     pub fn hexdigest(self: &mut Sha256) -> Result<String, Box<dyn Error>> {
         let digest: Vec<u8> = self.digest().unwrap();
         let mut hexdigest = String::new();
-        for byte in digest {
-            hexdigest += &format!("{:02x}", byte);
-        }
+        hexdigest = digest.iter()
+            .map(|x|format!("{:02x}", x))
+            .collect::<Vec<String>>()
+            .join("");
         Ok(hexdigest)
     }
 }
