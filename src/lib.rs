@@ -148,14 +148,11 @@ impl Sha256 {
         let mut pad = self.pad(self.counter).unwrap();
         self.update(&mut pad);
 
-        let mut tmp: Vec<u8> = Vec::<u8>::new();
-        for h in self.arr_h {
-            for h_byte in h.to_be_bytes() {
-                tmp.push(h_byte);
-            }
-        }
+        let arr_h_be: Vec<u8> = self.arr_h.iter()
+            .flat_map(|x|x.to_be_bytes())
+            .collect();
 
-        Ok(tmp.clone())
+        Ok(arr_h_be)
     }
 
     pub fn hexdigest(self: &mut Sha256) -> Result<String, Box<dyn Error>> {
