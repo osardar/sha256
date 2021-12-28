@@ -1,5 +1,7 @@
 use std::error::Error;
 
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 #[macro_export]
 macro_rules! overflowing_add {
     ( $( $x:expr ),* ) => {
@@ -49,7 +51,7 @@ impl Sha256 {
         }
     }
 
-    pub fn update(self: &mut Sha256, m: &mut Vec<u8>) -> Result<&[u32; 8], Box<dyn Error>> {
+    pub fn update(self: &mut Sha256, m: &mut Vec<u8>) -> Result<&[u32; 8]> {
         self.counter += m.len();
         self.cache.append(m);
 
@@ -64,7 +66,6 @@ impl Sha256 {
 
     fn compress(self: &mut Sha256, c: &Vec<u8>) {
         let mut w: [u32; 64] = [0; 64];
-        let c = c.clone();
 
         for i in 0..16 {
             w[i] = (c[4 * i] as u32) << 24
@@ -88,7 +89,6 @@ impl Sha256 {
 
         let [mut a, mut b, mut c, mut d, mut e, mut f, mut g, mut h]: [u32; 8] = self.arr_h;
 
-        //let mut s0: u32 = 0;
         let mut s0: u32;
         let mut s1: u32;
         let mut ch: u32;
@@ -124,7 +124,7 @@ impl Sha256 {
         self.arr_h[7] = overflowing_add!(self.arr_h[7], h);
     }
 
-    fn pad(self: &Sha256, msglen: usize) -> Result<Vec<u8>, Box<dyn Error>> {
+    fn pad(self: &Sha256, msglen: usize) -> Result<Vec<u8>> {
         let mdi = msglen & 0x3F;
         let mut length: Vec<u8> = ((msglen as u64) << 3).to_be_bytes().to_vec();
         let padlen;
@@ -144,8 +144,8 @@ impl Sha256 {
         Ok(pad)
     }
 
-    pub fn digest(self: &mut Sha256) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut pad = self.pad(self.counter).unwrap();
+    pub fn digest(self: &mut Sha256) -> Result<Vec<u8>> {
+        let mut pad = self.pad(self.counter)?;
         self.update(&mut pad);
 
         let arr_h_be: Vec<u8> = self.arr_h.iter()
@@ -155,8 +155,8 @@ impl Sha256 {
         Ok(arr_h_be)
     }
 
-    pub fn hexdigest(self: &mut Sha256) -> Result<String, Box<dyn Error>> {
-        let digest: Vec<u8> = self.digest().unwrap();
+    pub fn hexdigest(self: &mut Sha256) -> Result<String> {
+        let digest: Vec<u8> = self.digest()?;
         let mut hexdigest = String::new();
         hexdigest = digest.iter()
             .map(|x|format!("{:02x}", x))
