@@ -10,6 +10,6 @@ fn main() {
 
     let mut ctx: Sha256 = Sha256::init();
     let m: &mut Vec<u8> = &mut args[1].clone().into_bytes();
-    ctx.update(m);
+    ctx.update(m).expect("update() failure");
     println!("{}", ctx.hexdigest().unwrap());
 }

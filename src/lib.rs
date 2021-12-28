@@ -1,5 +1,3 @@
-use std::error::Error;
-
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[macro_export]
@@ -146,7 +144,7 @@ impl Sha256 {
 
     pub fn digest(self: &mut Sha256) -> Result<Vec<u8>> {
         let mut pad = self.pad(self.counter)?;
-        self.update(&mut pad);
+        self.update(&mut pad)?;
 
         let arr_h_be: Vec<u8> = self.arr_h.iter()
             .flat_map(|x|x.to_be_bytes())
@@ -157,8 +155,7 @@ impl Sha256 {
 
     pub fn hexdigest(self: &mut Sha256) -> Result<String> {
         let digest: Vec<u8> = self.digest()?;
-        let mut hexdigest = String::new();
-        hexdigest = digest.iter()
+        let hexdigest = digest.iter()
             .map(|x|format!("{:02x}", x))
             .collect::<Vec<String>>()
             .join("");
@@ -174,7 +171,7 @@ mod tests {
     fn test_empty() {
         let mut ctx: Sha256 = Sha256::init();
         let mut m: Vec<u8> = Vec::<u8>::new();
-        ctx.update(&mut m);
+        ctx.update(&mut m).expect("update() failure");
         assert_eq!(
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             ctx.hexdigest().unwrap()
@@ -185,7 +182,7 @@ mod tests {
     fn test_1b() {
         let mut ctx: Sha256 = Sha256::init();
         let mut m: Vec<u8> = "A".as_bytes().to_vec();
-        ctx.update(&mut m);
+        ctx.update(&mut m).expect("update() failure");
         assert_eq!(
             "559aead08264d5795d3909718cdd05abd49572e84fe55590eef31a88a08fdffd",
             ctx.hexdigest().unwrap()
@@ -196,7 +193,7 @@ mod tests {
     fn test_4b() {
         let mut ctx: Sha256 = Sha256::init();
         let mut m: Vec<u8> = "A".repeat(4).as_bytes().to_vec();
-        ctx.update(&mut m);
+        ctx.update(&mut m).expect("update() failure");
         assert_eq!(
             "63c1dd951ffedf6f7fd968ad4efa39b8ed584f162f46e715114ee184f8de9201",
             ctx.hexdigest().unwrap()
@@ -207,7 +204,7 @@ mod tests {
     fn test_64b() {
         let mut ctx: Sha256 = Sha256::init();
         let mut m: Vec<u8> = "A".repeat(64).as_bytes().to_vec();
-        ctx.update(&mut m);
+        ctx.update(&mut m).expect("update() failure");
         assert_eq!(
             "d53eda7a637c99cc7fb566d96e9fa109bf15c478410a3f5eb4d4c4e26cd081f6",
             ctx.hexdigest().unwrap()
@@ -218,7 +215,7 @@ mod tests {
     fn test_128b() {
         let mut ctx: Sha256 = Sha256::init();
         let mut m: Vec<u8> = "A".repeat(128).as_bytes().to_vec();
-        ctx.update(&mut m);
+        ctx.update(&mut m).expect("update() failure");
         assert_eq!(
             "b6ac3cc10386331c765f04f041c147d0f278f2aed8eaa021e2d0057fc6f6ff9e",
             ctx.hexdigest().unwrap()
